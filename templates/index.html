@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Caption Generator</title>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #d1c4e9, #f8bbd0); /* Soft pastel gradient */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #333;
+            overflow: hidden;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+            padding: 40px 30px;
+            text-align: center;
+            width: 100%;
+            max-width: 500px;
+            box-sizing: border-box;
+            animation: popIn 0.8s ease-out;
+        }
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0.9); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        h1 {
+            margin-bottom: 20px;
+            font-size: 2rem;
+            color: #2d3e50;
+            text-shadow: 1px 1px 10px rgba(0, 0, 0, 0.2);
+            font-weight: 600;
+        }
+        input[type="file"] {
+            margin: 15px 0;
+            font-size: 16px;
+            padding: 14px 20px;
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            cursor: pointer;
+            background-color: #fff;
+            width: 100%;
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        input[type="file"]:hover {
+            transform: scale(1.05);
+            border-color: #2980b9;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 14px 22px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.3s;
+            margin-top: 20px;
+            width: 100%;
+            font-weight: 500;
+        }
+        button:hover {
+            background: #2980b9;
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+        #image-preview {
+            margin-top: 20px;
+            max-width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            display: none;
+            max-height: 500px;
+            overflow: auto;
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            display: none;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        #progress-bar-container {
+            margin-top: 15px;
+            width: 100%;
+            background: #e6e6e6;
+            border-radius: 5px;
+            height: 10px;
+            overflow: hidden;
+        }
+        #progress-bar {
+            width: 0%;
+            height: 100%;
+            background: #3498db;
+            transition: width 0.4s ease;
+        }
+        #progress-percentage {
+            text-align: center;
+            font-size: 14px;
+            margin-top: 5px;
+            color: #3498db;
+        }
+        #caption {
+            margin-top: 25px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: #2c3e50;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        .error {
+            color: red;
+            font-size: 1rem;
+            margin-top: 20px;
+        }
+        footer {
+            margin-top: 30px;
+            font-size: 0.8rem;
+            color: #7f8c8d;
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            h1 {
+                font-size: 1.6rem;
+            }
+            input[type="file"], button {
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Image Caption Generator</h1>
+        <form id="uploadForm">
+            <input type="file" id="imageInput" accept="image/*" required />
+            <img id="image-preview" src="" alt="Image Preview" />
+            <div class="spinner" id="spinner"></div>
+            <div id="progress-bar-container">
+                <div id="progress-bar"></div>
+            </div>
+            <div id="progress-percentage">0%</div>
+            <button type="submit" id="submitButton">Generate Caption</button>
+        </form>
+        <div id="caption"></div>
+        <div id="error-message" class="error"></div>
+    </div>
+
+    <script>
+        const imageInput = document.getElementById("imageInput");
+        const imagePreview = document.getElementById("image-preview");
+        const captionDiv = document.getElementById("caption");
+        const spinner = document.getElementById("spinner");
+        const progressBar = document.getElementById("progress-bar");
+        const progressPercentage = document.getElementById("progress-percentage");
+        const submitButton = document.getElementById("submitButton");
+        const errorMessage = document.getElementById("error-message");
+
+        // Preview the selected image
+        imageInput.addEventListener("change", (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imagePreview.src = e.target.result;
+                    imagePreview.style.display = "block";
+                    if (file.size > 5000000) { 
+                        imagePreview.style.maxHeight = "500px"; 
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Handle form submission
+        document.getElementById("uploadForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const file = imageInput.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append("image", file);
+
+            captionDiv.textContent = "";
+            errorMessage.textContent = "";
+            progressBar.style.width = "0%";
+            progressPercentage.textContent = "0%";
+            spinner.style.display = "block";
+            submitButton.disabled = true;
+
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += 10;
+                progressBar.style.width = `${progress}%`;
+                progressPercentage.textContent = `${progress}%`;
+                if (progress >= 100) clearInterval(progressInterval);
+            }, 300);
+
+            try {
+                const response = await fetch("/caption", {
+                    method: "POST",
+                    body: formData,
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    captionDiv.textContent = `Caption: ${result.caption}`;
+                } else {
+                    errorMessage.textContent = `Error: ${result.error}`;
+                }
+            } catch (error) {
+                errorMessage.textContent = "An error occurred. Please try again.";
+            } finally {
+                spinner.style.display = "none";
+                submitButton.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
